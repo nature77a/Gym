@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💪 Gym Tracker Pro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: '#0ea5e9',
+        secondary: '#8b5cf6',
+        success: '#10b981',
+        'background-dark': '#0f172a',
+        'surface-dark': '#1e293b',
+        'card-dark': '#334155',
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .text-gradient { background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .bg-gradient-primary { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+  .screen { display: none; animation: fadeIn 0.25s ease; }
+  .screen.active { display: block; }
+  .modal-overlay { display: none; }
+  .modal-overlay.active { display: flex; }
+  .shadow-glow { box-shadow: 0 4px 20px -5px rgba(14,165,233,0.5); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 2px; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+<body class="dark bg-background-dark text-gray-100 min-h-screen">
+
+<!-- ══════════════════ HOME SCREEN ══════════════════ -->
+<div id="homeScreen" class="screen active">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col relative bg-background-dark">
+    <div class="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-80 h-80 bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <header class="relative z-10 px-6 pt-12 pb-4 flex justify-between items-center">
+      <div class="w-10"></div>
+      <h1 class="text-3xl font-bold tracking-tight text-gradient">GYM TRACKER</h1>
+      <button onclick="showScreen('settingsScreen')" class="w-10 h-10 flex items-center justify-center text-primary hover:bg-primary/10 rounded-full transition-colors">
+        <span class="material-icons">settings</span>
+      </button>
+    </header>
+
+    <div class="relative z-10 px-6 py-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col items-center p-5 rounded-2xl bg-surface-dark border border-primary/20 shadow-lg">
+          <span class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-semibold">Total Workouts</span>
+          <span class="text-5xl font-bold text-gradient" id="statTotalWorkouts">0</span>
+        </div>
+        <div class="flex flex-col items-center p-5 rounded-2xl bg-surface-dark border border-secondary/20 shadow-lg">
+          <span class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-semibold">Streak</span>
+          <div class="flex items-center gap-2">
+            <span class="text-5xl font-bold text-gradient" id="statStreak">0</span>
+            <span class="text-3xl">🔥</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-8 my-2"><div class="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div></div>
+
+    <div class="relative z-10 flex-1 overflow-y-auto px-6 py-2 space-y-3 pb-32">
+      <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Your Split</h2>
+      <div id="daysList"></div>
+    </div>
+
+    <div class="absolute bottom-6 right-6 z-20">
+      <button onclick="openAddDayModal()" class="w-16 h-16 rounded-full bg-gradient-primary text-white shadow-glow flex items-center justify-center hover:scale-110 transition-transform">
+        <span class="material-icons text-3xl">add</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ EXERCISES SCREEN ══════════════════ -->
+<div id="exercisesScreen" class="screen">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-background-dark">
+    <div class="h-12 shrink-0"></div>
+    <header class="px-6 py-4 flex items-center justify-between z-20 bg-surface-dark/50 backdrop-blur-md">
+      <button onclick="showScreen('homeScreen')" class="p-2 rounded-full hover:bg-primary/10 transition-colors">
+        <span class="material-icons text-primary">arrow_back</span>
+      </button>
+      <h1 class="text-2xl font-bold text-white" id="currentDayName">Push Day</h1>
+      <button onclick="openEditDayModal()" class="p-2 rounded-full hover:bg-primary/10 transition-colors">
+        <span class="material-icons text-primary">edit</span>
+      </button>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-6 pb-40 pt-4 space-y-3" id="exercisesList"></main>
+
+    <div class="fixed bottom-0 left-0 w-full z-30 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent p-6">
+      <div class="max-w-md mx-auto flex gap-3">
+        <button onclick="openAddExerciseModal()" class="flex-1 bg-surface-dark border border-primary/30 hover:border-primary text-primary font-semibold text-sm py-4 rounded-xl transition-all flex items-center justify-center gap-2">
+          <span class="material-icons text-lg">add</span> ADD EXERCISE
+        </button>
+        <button onclick="startSession()" class="flex-1 bg-gradient-primary hover:shadow-glow text-white font-bold text-sm py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="material-icons text-lg">play_arrow</span> START SESSION
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SESSION SCREEN (NEW) ══════════════════ -->
+<div id="sessionScreen" class="screen">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-background-dark">
+    <div class="h-12 shrink-0"></div>
+    <header class="px-6 py-4 flex items-center justify-between bg-surface-dark/60 backdrop-blur-md sticky top-0 z-20">
+      <button onclick="showScreen('exercisesScreen')" class="p-2 rounded-full hover:bg-primary/10 transition-colors">
+        <span class="material-icons text-primary">arrow_back</span>
+      </button>
+      <div class="text-center">
+        <h1 class="text-xl font-bold text-white" id="sessionDayTitle">Push Day</h1>
+        <p class="text-xs text-primary font-semibold uppercase tracking-wider">Active Session</p>
+      </div>
+      <div class="w-10"></div>
+    </header>
+
+    <div class="px-4 pt-4 pb-2">
+      <div class="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 text-center">
+        <p class="text-xs text-primary font-semibold">Fill in your reps for each set — hit the max to level up weight! 💪</p>
+      </div>
+    </div>
+
+    <main class="flex-1 overflow-y-auto px-4 pt-3 pb-36 space-y-4" id="sessionFormList"></main>
+
+    <div class="fixed bottom-0 left-0 w-full z-30 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent p-6">
+      <div class="max-w-md mx-auto">
+        <button onclick="completeSession()" class="w-full bg-gradient-primary hover:shadow-glow text-white font-bold text-base py-5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95">
+          <span class="material-icons">check_circle</span> COMPLETE SESSION
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SESSION RESULTS SCREEN (NEW) ══════════════════ -->
+<div id="sessionResultsScreen" class="screen">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-background-dark relative">
+    <div class="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none"></div>
+
+    <div class="relative z-10 px-6 pt-16 pb-6 text-center">
+      <div class="text-6xl mb-4">🏆</div>
+      <h1 class="text-4xl font-extrabold tracking-tight text-gradient uppercase mb-2">VICTORY!</h1>
+      <p class="text-gray-400 text-sm uppercase tracking-widest font-medium">Session Complete</p>
+    </div>
+
+    <div class="relative z-10 px-6 pb-4">
+      <div class="grid grid-cols-3 gap-3" id="sessionStats"></div>
+    </div>
+
+    <div class="px-6 mb-2"><div class="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div></div>
+    <h2 class="px-6 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Exercise Results</h2>
+
+    <main class="flex-1 overflow-y-auto px-6 pb-36 space-y-3" id="sessionResultsList"></main>
+
+    <div class="fixed bottom-0 left-0 w-full z-30 bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent p-6">
+      <div class="max-w-md mx-auto">
+        <button onclick="finishSession()" class="w-full bg-gradient-primary hover:shadow-glow text-white font-bold text-base py-5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95">
+          <span class="material-icons">home</span> DONE — BACK HOME
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SETTINGS SCREEN ══════════════════ -->
+<div id="settingsScreen" class="screen">
+  <div class="w-full max-w-md mx-auto min-h-screen bg-background-dark">
+    <div class="px-6 pt-12 pb-2">
+      <button onclick="showScreen('homeScreen')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors">
+        <span class="material-icons">arrow_back</span>
+      </button>
+    </div>
+    <header class="px-6 py-4">
+      <h1 class="text-4xl font-bold text-white">Settings</h1>
+      <p class="text-sm text-primary uppercase tracking-widest mt-2 font-semibold">Configuration</p>
+    </header>
+    <main class="px-6 pb-8 space-y-4 mt-4">
+      <div class="bg-surface-dark rounded-xl border border-gray-700 p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <span class="material-icons">file_upload</span>
+          </div>
+          <span class="text-sm font-semibold text-white">Export Data</span>
+        </div>
+        <button onclick="exportData()" class="px-4 py-2 bg-primary/20 text-primary rounded-lg text-sm font-semibold">Export</button>
+      </div>
+      <div class="bg-surface-dark rounded-xl border border-gray-700 p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+            <span class="material-icons">warning</span>
+          </div>
+          <div>
+            <span class="block text-sm font-bold text-red-500">Clear All Data</span>
+            <span class="block text-xs text-gray-400">Cannot be undone</span>
+          </div>
+        </div>
+        <button onclick="clearAllData()" class="px-4 py-2 bg-red-500/20 text-red-500 rounded-lg text-sm font-semibold">Clear</button>
+      </div>
+      <div class="bg-surface-dark rounded-xl border border-gray-700 p-5 text-center">
+        <p class="text-xs text-gray-400">Gym Tracker Pro — Built for your gains 💪</p>
+        <p class="text-xs text-gray-600 mt-1">PPL Split • Progressive Overload</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<div id="addDayModal" class="modal-overlay fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-center justify-center px-4">
+  <div class="w-full max-w-sm bg-surface-dark border border-primary/30 rounded-2xl shadow-2xl p-8 relative">
+    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-primary rounded-t-2xl"></div>
+    <h2 class="text-2xl font-bold text-white mb-6 text-center" id="addDayModalTitle">Add New Day</h2>
+    <input type="text" id="newDayName" placeholder="e.g. Push Day" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-lg text-center font-semibold text-white placeholder-gray-500 focus:outline-none mb-6">
+    <input type="hidden" id="editingDayId">
+    <div class="flex flex-col gap-3">
+      <button onclick="saveDay()" class="w-full bg-gradient-primary text-white font-bold py-4 rounded-xl shadow-glow">Save Day</button>
+      <button onclick="closeModal('addDayModal')" class="w-full py-3 text-gray-400 hover:text-white transition-colors text-sm font-semibold">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="exerciseModal" class="modal-overlay fixed inset-0 bg-black/70 backdrop-blur-sm z-50 items-end justify-center">
+  <div class="w-full max-w-md bg-surface-dark rounded-t-2xl border-t border-primary/30 shadow-2xl flex flex-col max-h-[90vh]">
+    <div class="px-6 pt-5 pb-3 flex justify-between items-center border-b border-gray-700">
+      <h2 class="text-xl font-bold text-white" id="exerciseModalTitle">Add Exercise</h2>
+      <button onclick="closeModal('exerciseModal')" class="text-gray-400 hover:text-white">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6 space-y-5">
+      <input type="hidden" id="editingExerciseId">
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Exercise Name</label>
+        <input type="text" id="exName" placeholder="e.g. Bench Press" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 font-semibold text-white placeholder-gray-500 focus:outline-none">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Weight (kg)</label>
+          <input type="number" id="exWeight" step="0.5" value="10" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-2xl font-bold text-white text-center focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Sets</label>
+          <input type="number" id="exSets" min="1" value="2" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-2xl font-bold text-white text-center focus:outline-none">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rep Range (Min – Max)</label>
+        <div class="grid grid-cols-2 gap-4">
+          <input type="number" id="exRepMin" value="8" placeholder="Min" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-2xl font-bold text-white text-center focus:outline-none">
+          <input type="number" id="exRepMax" value="14" placeholder="Max" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-2xl font-bold text-white text-center focus:outline-none">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Weight Increase (kg)</label>
+        <input type="number" id="exProgression" step="0.5" value="2.5" class="w-full bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-4 py-3 text-2xl font-bold text-white text-center focus:outline-none">
+      </div>
+      <div class="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+        <div class="flex items-center gap-2">
+          <span class="material-icons text-orange-400">local_fire_department</span>
+          <span class="text-sm font-semibold text-white">Warm-up Set</span>
+        </div>
+        <input type="checkbox" id="exWarmup" class="w-5 h-5 accent-primary cursor-pointer">
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-gray-700 flex gap-3">
+      <button id="deleteExBtn" onclick="deleteExercise()" class="w-12 h-12 rounded-xl hover:bg-red-500/10 text-red-500 flex items-center justify-center transition-colors" style="display:none;">
+        <span class="material-icons">delete_outline</span>
+      </button>
+      <button onclick="saveExercise()" class="flex-1 bg-gradient-primary text-white font-bold py-3 rounded-xl shadow-glow">Save Exercise</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ JAVASCRIPT ══════════════════ -->
+<script>
+const STORAGE_KEY = 'gymTrackerPro_v3';
+
+function defaultData() {
+  return {
+    days: [
+      {
+        id: 'd_push', name: 'Push Day',
+        exercises: [
+          { id: 'p1', name: 'Incline Dumbbell Press', weight: 12.5, sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: true },
+          { id: 'p2', name: 'Chest Machine',          weight: 15,   sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+          { id: 'p3', name: 'Cable Fly',              weight: 5,    sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+          { id: 'p4', name: 'Shoulder Machine',       weight: 10,   sets: 3, repMin: 8, repMax: 14, progression: 2.5, isWarmup: true },
+          { id: 'p5', name: 'Side Delt Fly',          weight: 2.5,  sets: 2, repMin: 15, repMax: 20, progression: 2.5, isWarmup: false },
+          { id: 'p6', name: 'Tricep Overhead Ext.',   weight: 5,    sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+          { id: 'p7', name: 'Push Down',              weight: 5,    sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+        ]
+      },
+      {
+        id: 'd_pull', name: 'Pull Day',
+        exercises: [
+          { id: 'pu1', name: 'Lat Pulldown',         weight: 12.5, sets: 3, repMin: 8, repMax: 14, progression: 2.5, isWarmup: true },
+          { id: 'pu2', name: 'Chest Supported Rows', weight: 15,   sets: 4, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+          { id: 'pu3', name: 'Rear Delt',            weight: 7.5,  sets: 2, repMin: 12, repMax: 20, progression: 2.5, isWarmup: false },
+          { id: 'pu4', name: 'Bicep Curl',           weight: 7.5,  sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: true },
+          { id: 'pu5', name: 'Hammer Curl',          weight: 5,    sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+        ]
+      },
+      {
+        id: 'd_legs', name: 'Legs Day',
+        exercises: [
+          { id: 'l1', name: 'Squats',             weight: 20, sets: 3, repMin: 8, repMax: 12, progression: 5,   isWarmup: true },
+          { id: 'l2', name: 'RDL',                weight: 20, sets: 2, repMin: 8, repMax: 12, progression: 2.5, isWarmup: false },
+          { id: 'l3', name: 'Leg Curl',           weight: 15, sets: 2, repMin: 8, repMax: 14, progression: 2.5, isWarmup: false },
+          { id: 'l4', name: 'Calves Single Foot', weight: 0,  sets: 2, repMin: 15, repMax: 25, progression: 0,  isWarmup: false },
+          { id: 'l5', name: 'Cable Crunch',       weight: 10, sets: 3, repMin: 10, repMax: 15, progression: 2.5, isWarmup: false },
+        ]
+      }
+    ],
+    totalWorkouts: 31,
+    streak: 0,
+    lastWorkout: null
+  };
+}
+
+let data = (function() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    return s ? JSON.parse(s) : defaultData();
+  } catch { return defaultData(); }
+})();
+
+let currentDayId = null;
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function uid() {
+  return 'id_' + Math.random().toString(36).slice(2, 9);
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── HOME ─────────────────────────────────────────────────────────────────────
+function renderHome() {
+  document.getElementById('statTotalWorkouts').textContent = data.totalWorkouts;
+  document.getElementById('statStreak').textContent = data.streak;
+
+  const list = document.getElementById('daysList');
+  if (!data.days.length) {
+    list.innerHTML = `<div class="text-center py-12 text-gray-500">
+      <span class="material-icons text-5xl mb-3 block opacity-30">fitness_center</span>
+      <p class="text-sm">No workout days yet.<br>Tap + to add your first day.</p></div>`;
+    return;
+  }
+  list.innerHTML = data.days.map(day => `
+    <div class="relative bg-surface-dark rounded-xl border border-gray-700 hover:border-primary/40 transition-all cursor-pointer mb-3" onclick="openDay('${day.id}')">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary rounded-l-xl"></div>
+      <div class="p-4 pl-5 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-bold text-white">${day.name}</h3>
+          <p class="text-xs text-primary mt-1 font-semibold">${day.exercises.length} Exercise${day.exercises.length !== 1 ? 's' : ''}</p>
+        </div>
+        <span class="material-icons text-gray-400">chevron_right</span>
+      </div>
+    </div>`).join('');
+}
+
+function openDay(dayId) {
+  currentDayId = dayId;
+  const day = data.days.find(d => d.id === dayId);
+  document.getElementById('currentDayName').textContent = day.name;
+  renderExercises();
+  showScreen('exercisesScreen');
+}
+
+// ── EXERCISES ─────────────────────────────────────────────────────────────────
+function renderExercises() {
+  const day = data.days.find(d => d.id === currentDayId);
+  const list = document.getElementById('exercisesList');
+  if (!day || !day.exercises.length) {
+    list.innerHTML = `<div class="text-center py-12 text-gray-500">
+      <span class="material-icons text-5xl mb-3 block opacity-30">add_circle</span>
+      <p class="text-sm">No exercises yet.<br>Tap ADD EXERCISE to get started.</p></div>`;
+    return;
+  }
+  list.innerHTML = day.exercises.map((ex, i) => `
+    <div class="bg-surface-dark rounded-xl border border-gray-700 p-4">
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex-1">
+          <h3 class="text-base font-bold text-white mb-2">${ex.name}</h3>
+          <div class="flex flex-wrap gap-2 mb-2">
+            ${ex.isWarmup ? `<span class="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs font-bold uppercase">Warm-up</span>` : ''}
+            ${ex.progression > 0 ? `<span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs font-bold uppercase">+${ex.progression}kg</span>` : ''}
+          </div>
+          <div class="flex gap-6">
+            <div><span class="block text-xs text-gray-400 mb-1">Weight</span><span class="text-xl text-primary font-bold">${ex.weight}<span class="text-sm text-gray-400"> kg</span></span></div>
+            <div><span class="block text-xs text-gray-400 mb-1">Sets × Reps</span><span class="text-xl text-secondary font-bold">${ex.sets} × ${ex.repMin}-${ex.repMax}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-3 border-t border-gray-700">
+        <button onclick="moveEx('${ex.id}',-1)" ${i===0?'disabled':''} class="flex-1 py-2 rounded-lg hover:bg-primary/10 text-primary text-xs font-semibold transition-colors disabled:opacity-30">↑ Up</button>
+        <button onclick="moveEx('${ex.id}',1)" ${i===day.exercises.length-1?'disabled':''} class="flex-1 py-2 rounded-lg hover:bg-primary/10 text-primary text-xs font-semibold transition-colors disabled:opacity-30">↓ Down</button>
+        <button onclick="openEditExerciseModal('${ex.id}')" class="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"><span class="material-icons text-lg">edit</span></button>
+        <button onclick="deleteExerciseById('${ex.id}')" class="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"><span class="material-icons text-lg">delete</span></button>
+      </div>
+    </div>`).join('');
+}
+
+function moveEx(exId, dir) {
+  const day = data.days.find(d => d.id === currentDayId);
+  const idx = day.exercises.findIndex(e => e.id === exId);
+  const ni = idx + dir;
+  if (ni < 0 || ni >= day.exercises.length) return;
+  [day.exercises[idx], day.exercises[ni]] = [day.exercises[ni], day.exercises[idx]];
+  saveData(); renderExercises();
+}
+
+// ── SESSION ───────────────────────────────────────────────────────────────────
+function startSession() {
+  const day = data.days.find(d => d.id === currentDayId);
+  if (!day || !day.exercises.length) { alert('Add some exercises first!'); return; }
+
+  document.getElementById('sessionDayTitle').textContent = day.name;
+
+  document.getElementById('sessionFormList').innerHTML = day.exercises.map(ex => `
+    <div class="bg-surface-dark rounded-2xl border border-gray-700 overflow-hidden">
+      <div class="px-4 pt-4 pb-3 border-b border-gray-700/60">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">${ex.name}</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Target: ${ex.sets} sets × ${ex.repMin}–${ex.repMax} reps</p>
+          </div>
+          <span class="text-lg font-bold text-primary ml-2 shrink-0">${ex.weight}<span class="text-xs text-gray-400"> kg</span></span>
+        </div>
+        ${ex.isWarmup ? `<span class="inline-block mt-2 px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs font-bold uppercase">🔥 Warm-up</span>` : ''}
+      </div>
+      <div class="px-4 py-3 space-y-2">
+        ${Array.from({length: ex.sets}, (_, i) => `
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-gray-400 w-12 shrink-0 text-right">Set ${i+1}</span>
+            <input
+              type="number" inputmode="numeric"
+              id="rep_${ex.id}_${i}"
+              placeholder="${ex.repMin}–${ex.repMax}"
+              min="0" max="100"
+              class="flex-1 bg-card-dark border-2 border-gray-600 focus:border-primary rounded-xl px-3 py-3 text-xl font-bold text-white text-center focus:outline-none transition-colors placeholder-gray-600"
+              oninput="highlightRep(this,${ex.repMax})"
+            >
+            <span class="text-xs text-gray-500 w-8 shrink-0">reps</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  showScreen('sessionScreen');
+}
+
+function highlightRep(input, maxReps) {
+  const val = parseInt(input.value);
+  if (!isNaN(val) && val >= maxReps) {
+    input.style.borderColor = '#10b981';
+    input.style.color = '#10b981';
+  } else {
+    input.style.borderColor = '';
+    input.style.color = '';
+  }
+}
+
+function completeSession() {
+  const day = data.days.find(d => d.id === currentDayId);
+  const results = [];
+
+  for (const ex of day.exercises) {
+    const setsData = [];
+    for (let i = 0; i < ex.sets; i++) {
+      const inp = document.getElementById(`rep_${ex.id}_${i}`);
+      const val = parseInt(inp?.value);
+      if (isNaN(val) || val < 0) {
+        alert(`Please fill in all reps for "${ex.name}"`);
+        inp?.focus();
+        return;
+      }
+      setsData.push(val);
+    }
+    const allHitMax = setsData.every(r => r >= ex.repMax);
+    const anyHitMax = setsData.some(r => r >= ex.repMax);
+    const willIncrease = allHitMax && ex.progression > 0;
+    const oldWeight = ex.weight;
+    results.push({ exercise: ex, setsData, allHitMax, anyHitMax, willIncrease, oldWeight, newWeight: willIncrease ? ex.weight + ex.progression : ex.weight });
+  }
+
+  // Apply increases
+  for (const r of results) {
+    if (r.willIncrease) {
+      const ex = day.exercises.find(e => e.id === r.exercise.id);
+      if (ex) ex.weight = r.newWeight;
+    }
+  }
+
+  // Update stats
+  data.totalWorkouts += 1;
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (data.lastWorkout !== today) {
+    data.streak = data.lastWorkout === yesterday ? data.streak + 1 : 1;
+    data.lastWorkout = today;
+  }
+
+  saveData();
+  renderSessionResults(results);
+}
+
+function renderSessionResults(results) {
+  const increased = results.filter(r => r.willIncrease).length;
+
+  document.getElementById('sessionStats').innerHTML = `
+    <div class="text-center p-3 bg-surface-dark rounded-xl border border-gray-700">
+      <div class="text-2xl font-bold text-white">${results.length}</div>
+      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wider">Exercises</div>
+    </div>
+    <div class="text-center p-3 bg-success/10 rounded-xl border border-success/30">
+      <div class="text-2xl font-bold text-success">${increased}</div>
+      <div class="text-xs text-success mt-1 uppercase tracking-wider">Leveled Up</div>
+    </div>
+    <div class="text-center p-3 bg-primary/10 rounded-xl border border-primary/20">
+      <div class="text-2xl font-bold text-primary">${results.length - increased}</div>
+      <div class="text-xs text-primary mt-1 uppercase tracking-wider">Maintain</div>
+    </div>`;
+
+  document.getElementById('sessionResultsList').innerHTML = results.map(r => {
+    const hitHtml = r.setsData.map(s =>
+      s >= r.exercise.repMax
+        ? `<span class="text-success font-bold">${s}</span>`
+        : `<span class="text-gray-300">${s}</span>`
+    ).join(', ') + ' reps';
+
+    if (r.willIncrease) {
+      return `
+        <div class="bg-success/10 border border-success/30 rounded-xl p-4">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-bold text-white text-sm flex-1">${r.exercise.name}</h3>
+            <span class="text-xs bg-success/20 text-success px-2 py-0.5 rounded font-bold ml-2 shrink-0">⬆️ LEVELED UP</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-2">Sets: ${hitHtml}</p>
+          <p class="text-sm font-semibold text-success">Next session → <span class="text-white">${r.newWeight} kg</span> <span class="text-xs text-gray-400">(was ${r.oldWeight} kg)</span></p>
+        </div>`;
+    } else {
+      const tip = r.anyHitMax ? 'Almost! Get all sets to max next time.' : `Aim for ${r.exercise.repMax} reps on all sets.`;
+      return `
+        <div class="bg-surface-dark border border-gray-700 rounded-xl p-4">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-bold text-white text-sm flex-1">${r.exercise.name}</h3>
+            <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-bold ml-2 shrink-0">✅ MAINTAIN</span>
+          </div>
+          <p class="text-xs text-gray-400 mb-2">Sets: ${hitHtml}</p>
+          <p class="text-sm text-gray-400">Keep at <span class="text-white font-semibold">${r.exercise.weight} kg</span> — ${tip}</p>
+        </div>`;
+    }
+  }).join('');
+
+  showScreen('sessionResultsScreen');
+}
+
+function finishSession() {
+  renderHome();
+  showScreen('homeScreen');
+}
+
+// ── DAY MODAL ─────────────────────────────────────────────────────────────────
+function openAddDayModal() {
+  document.getElementById('addDayModalTitle').textContent = 'Add New Day';
+  document.getElementById('newDayName').value = '';
+  document.getElementById('editingDayId').value = '';
+  openModal('addDayModal');
+}
+
+function openEditDayModal() {
+  const day = data.days.find(d => d.id === currentDayId);
+  document.getElementById('addDayModalTitle').textContent = 'Rename Day';
+  document.getElementById('newDayName').value = day.name;
+  document.getElementById('editingDayId').value = day.id;
+  openModal('addDayModal');
+}
+
+function saveDay() {
+  const name = document.getElementById('newDayName').value.trim();
+  if (!name) return alert('Please enter a day name.');
+  const editId = document.getElementById('editingDayId').value;
+  if (editId) {
+    data.days.find(d => d.id === editId).name = name;
+    document.getElementById('currentDayName').textContent = name;
+  } else {
+    data.days.push({ id: uid(), name, exercises: [] });
+  }
+  saveData(); closeModal('addDayModal'); renderHome();
+}
+
+// ── EXERCISE MODAL ────────────────────────────────────────────────────────────
+function openAddExerciseModal() {
+  document.getElementById('exerciseModalTitle').textContent = 'Add Exercise';
+  document.getElementById('editingExerciseId').value = '';
+  document.getElementById('exName').value = '';
+  document.getElementById('exWeight').value = 10;
+  document.getElementById('exSets').value = 2;
+  document.getElementById('exRepMin').value = 8;
+  document.getElementById('exRepMax').value = 14;
+  document.getElementById('exProgression').value = 2.5;
+  document.getElementById('exWarmup').checked = false;
+  document.getElementById('deleteExBtn').style.display = 'none';
+  openModal('exerciseModal');
+}
+
+function openEditExerciseModal(exId) {
+  const ex = data.days.find(d => d.id === currentDayId).exercises.find(e => e.id === exId);
+  document.getElementById('exerciseModalTitle').textContent = 'Edit Exercise';
+  document.getElementById('editingExerciseId').value = exId;
+  document.getElementById('exName').value = ex.name;
+  document.getElementById('exWeight').value = ex.weight;
+  document.getElementById('exSets').value = ex.sets;
+  document.getElementById('exRepMin').value = ex.repMin;
+  document.getElementById('exRepMax').value = ex.repMax;
+  document.getElementById('exProgression').value = ex.progression;
+  document.getElementById('exWarmup').checked = ex.isWarmup;
+  document.getElementById('deleteExBtn').style.display = 'flex';
+  openModal('exerciseModal');
+}
+
+function saveExercise() {
+  const name = document.getElementById('exName').value.trim();
+  if (!name) return alert('Please enter an exercise name.');
+  const day = data.days.find(d => d.id === currentDayId);
+  const editId = document.getElementById('editingExerciseId').value;
+  const exObj = {
+    name,
+    weight: parseFloat(document.getElementById('exWeight').value) || 0,
+    sets: parseInt(document.getElementById('exSets').value) || 2,
+    repMin: parseInt(document.getElementById('exRepMin').value) || 8,
+    repMax: parseInt(document.getElementById('exRepMax').value) || 14,
+    progression: parseFloat(document.getElementById('exProgression').value) || 0,
+    isWarmup: document.getElementById('exWarmup').checked,
+  };
+  if (editId) {
+    const idx = day.exercises.findIndex(e => e.id === editId);
+    day.exercises[idx] = { ...day.exercises[idx], ...exObj };
+  } else {
+    day.exercises.push({ id: uid(), ...exObj });
+  }
+  saveData(); closeModal('exerciseModal'); renderExercises();
+}
+
+function deleteExercise() {
+  const editId = document.getElementById('editingExerciseId').value;
+  if (editId) { deleteExerciseById(editId); closeModal('exerciseModal'); }
+}
+
+function deleteExerciseById(exId) {
+  if (!confirm('Delete this exercise?')) return;
+  const day = data.days.find(d => d.id === currentDayId);
+  day.exercises = day.exercises.filter(e => e.id !== exId);
+  saveData(); renderExercises();
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'gym-tracker-backup.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAllData() {
+  if (!confirm('Clear ALL data? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  data = defaultData();
+  saveData(); renderHome(); showScreen('homeScreen');
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderHome();
+</script>
+</body>
+</html>
